@@ -1,0 +1,115 @@
+plugin load chromatin.so
+variable fname index 172_24.txt
+variable simname index nucl
+variable rand internal 172124
+
+# Initialization
+units		real
+atom_style   hybrid ellipsoid angle charge
+
+boundary p p p
+
+log 	log.${simname}.txt
+read_data	${fname}
+
+include mass.txt
+
+pair_style ljlambda 0.1 35.0 35.0
+dielectric  80.0
+
+include bonds.txt 
+
+include pairs.txt
+
+special_bonds fene
+neighbor 10 bin
+group nucl id 41:135 161:237 258:350 391:487 528:622 648:724 745:837 878:974 1015:1109 1135:1211 1232:1324 1365:1461 1502:1596 1622:1698 1719:1811 1852:1948 1989:2083 2109:2185 2206:2298 2339:2435 2476:2570 2596:2672 2693:2785 2826:2922 2963:3057 3083:3159 3180:3272 3313:3409 3450:3544 3570:3646 3667:3759 3800:3896 3937:4031 4057:4133 4154:4246 4287:4383 4424:4518 4544:4620 4641:4733 4774:4870 4911:5005 5031:5107 5128:5220 5261:5357 5398:5492 5518:5594 5615:5707 5748:5844 5885:5979 6005:6081 6102:6194 6235:6331 6372:6466 6492:6568 6589:6681 6722:6818 6859:6953 6979:7055 7076:7168 7209:7305 7346:7440 7466:7542 7563:7655 7696:7792 7833:7927 7953:8029 8050:8142 8183:8279 8320:8414 8440:8516 8537:8629 8670:8766 8807:8901 8927:9003 9024:9116 9157:9253 9294:9388 9414:9490 9511:9603 9644:9740 9781:9875 9901:9977 9998:10090 10131:10227 10268:10362 10388:10464 10485:10577 10618:10714 10755:10849 10875:10951 10972:11064 11105:11201 11242:11336 11362:11438 11459:11551 11592:11688
+group dna type 81
+group ps type 82
+group POUS id 18018:18104 18378:18464 18738:18824 19098:19184 19458:19544 19818:19904 20178:20264 20538:20624 20898:20984 21258:21344 21618:21704 21978:22064 22338:22424 22698:22784 23058:23144 23418:23504 23778:23864 24138:24224 24498:24584 24858:24944 25218:25304 25578:25664 25938:26024 26298:26384 26658:26744 27018:27104 27378:27464 27738:27824 28098:28184 28458:28544 28818:28904 29178:29264 29538:29624 29898:29984 30258:30344 30618:30704 30978:31064 31338:31424 31698:31784 32058:32144 32418:32504 32778:32864 33138:33224 33498:33584 33858:33944 34218:34304 34578:34664 34938:35024
+
+group POUHD id 18118:18167 18478:18527 18838:18887 19198:19247 19558:19607 19918:19967 20278:20327 20638:20687 20998:21047 21358:21407 21718:21767 22078:22127 22438:22487 22798:22847 23158:23207 23518:23567 23878:23927 24238:24287 24598:24647 24958:25007 25318:25367 25678:25727 26038:26087 26398:26447 26758:26807 27118:27167 27478:27527 27838:27887 28198:28247 28558:28607 28918:28967 29278:29327 29638:29687 29998:30047 30358:30407 30718:30767 31078:31127 31438:31487 31798:31847 32158:32207 32518:32567 32878:32927 33238:33287 33598:33647 33958:34007 34318:34367 34678:34727 35038:35087
+
+group dna_all union dna ps
+group notdna subtract all dna_all
+group rigid_integrate union  POUS POUHD
+neigh_modify exclude molecule/intra nucl
+neigh_modify exclude molecule/intra dna_all
+neigh_modify exclude molecule/intra POUS
+neigh_modify exclude molecule/intra POUHD
+neigh_modify exclude type 81 82
+neigh_modify exclude type 81 81
+group notrigid subtract notdna rigid_integrate
+
+thermo_style    custom step temp pe ebond ke spcpu press density
+
+thermo          1000
+
+restart 10000 nucl.restart.1 nucl.restart.2
+
+comm_style tiled
+fix bl all balance 1000 1.0 rcb
+
+compute q dna property/atom quatw quati quatj quatk
+compute shape dna property/atom shapex shapey shapez
+
+compute       rad all gyration
+fix out1 all print 100000 rad file radius.data
+
+
+dump      1 all custom 500000 dna.dump &
+             id xu yu zu c_q[1] c_q[2] c_q[3] c_q[4] &
+              c_shape[1] c_shape[2] c_shape[3] mol q type
+
+dump_modify 1 sort id
+
+dump    2 all xtc 50000 NRL172_000-200.xtc
+
+
+fix 1 notrigid nve
+fix 2 notrigid viscous 1000.0
+
+timestep 0.01
+run 2000
+
+timestep 0.1
+run 2000
+
+timestep 5.0
+run 2000
+
+timestep 10.0
+run 5000
+
+unfix 1
+unfix 2
+unfix bl
+
+# start rest of system, thermalise at 300K with damping of 1ps
+
+#group rigid_all union dna_all rigid_integrate
+
+fix 2 notrigid nve
+fix 3 notrigid langevin 0.0 300 1000.0 ${rand}
+fix 5 dna langevin 0.0 300 1000.0 ${rand} angmom 3.0
+fix 2 notrigid nve
+fix 4 dna_all rigid/nve/small molecule
+fix fxrig1 POUS rigid/nvt molecule temp 300 300 100000.0
+fix fxrig2 POUHD rigid/nvt molecule temp 300 300 100000.0
+fix bl all balance 1000 1.0 rcb
+
+
+run 10000
+
+
+unfix 3
+unfix 5
+
+timestep 10.0
+fix 3 notrigid langevin 300 300 100000.0 ${rand}
+fix 5 dna langevin 300 300 100000.0 ${rand} angmom 3.0
+
+restart      1000000 nucl.restart.1 nucl.restart.2
+
+run 20000000
+
