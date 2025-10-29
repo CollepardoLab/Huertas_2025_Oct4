@@ -12,7 +12,7 @@ For compiling the chromatin multiscale model, please follow the instructions in 
 The files needed to run a typical simulation from the paper are in the demo folder.
 Please download the whole folder, and run using at least 16 cores, for example:
 ```
-mpirun -np 16 ./lmp -in in.run
+mpirun -np 16 ./lmp -in run.in
 ```
 
 ## Visualization
