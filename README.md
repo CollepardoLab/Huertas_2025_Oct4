@@ -6,7 +6,7 @@ We are delighted to share our model for chromatin structure in the presence of O
 For questions, contact Jan Huertas: jh2366[at]cam.ac.uk
 
 ## Installation Guide
-For compiling the chromatin multiscale model, please follow the instructions in https://github.com/CollepardoLab/CollepardoLab_Chromatin_Model/plugin_dev
+For compiling the chromatin multiscale model, please follow the instructions in https://github.com/CollepardoLab/CollepardoLab_Chromatin_Model/tree/plugin-dev
 
 ## Usage
 The files needed to run a typical simulation from the paper are in the demo folder.
